@@ -1,0 +1,45 @@
+module atm_property_suite( clk, error_i, multiple_i,  correct_o, dismiss_o);
+	input clk;
+	input error_i;
+	input multiple_i;
+	input correct_o;
+	input dismiss_o;
+	
+	`include "tidal.sv"
+
+	`begin_sva(sva)
+		//properties definitions
+		property property_1_1; // A cell is never corrected and dismissed at the same time.
+			correct_o implies dismiss_o == 1'b0;
+		endproperty
+
+		property property_1_2; // A cell is never corrected and dismissed at the same time.
+			dismiss_o implies correct_o == 1'b0;
+		endproperty
+		
+		property property_2; // An error-free cell is neither corrected nor dismissed
+			!error_i implies (!correct_o && !dismiss_o);
+		endproperty
+		property property_3; // A cell with multiple errors is dismessed
+			multiple_i && error_i implies dismiss_o;
+		endproperty
+		property property_4; // A first erroneous cell coming in is corrected if the error is a single-bit error and not a multiple-bit error
+			!$past(error_i)&& !multiple_i && error_i implies correct_o;
+		endproperty
+		property property_5; // A first erroneous cell coming in is corrected if the error is a single-bit error and not a multiple-bit error
+			$past(error_i) && error_i implies dismiss_o;
+		endproperty
+		//assertion 
+		assert_propert_1_1: assert property(@(posedge clk) property_1_1);
+		assert_propert_1_2: assert property(@(posedge clk) property_1_2);
+		assert_propert_2: assert property(@(posedge clk) property_2);
+		assert_propert_3: assert property(@(posedge clk) property_3);
+		assert_propert_4: assert property(@(posedge clk) property_4);
+		assert_propert_5: assert property(@(posedge clk) property_5);
+	`end_sva
+
+
+endmodule
+
+// Bind assertion module to DUV
+bind atm atm_property_suite inst_atm_property_suite(.*);
